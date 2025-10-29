@@ -9,7 +9,7 @@ import { useUser, useClerk, UserButton } from "@clerk/nextjs";
 const Navbar = () => {
   const { user } = useUser();
   const router = useRouter();
-  const { OpenSignIn } = useClerk();
+  const { openSignIn } = useClerk();
 
   const [search, setSearch] = useState("");
   const cartCount = useSelector((state) => state.cart.total);
