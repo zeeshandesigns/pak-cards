@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import ImageKit from "imagekit";
 import imageki from "@/configs/imagekit";
+import next from "next";
 
 // creating the store
 export async function POST(request) {
@@ -107,8 +108,12 @@ export async function GET(request) {
     if (!storeId) {
       return NextResponse.json({ error: "Not Authorized" }, { status: 401 });
     }
-
-    return NextResponse.json(products, { status: 200 });
+    const products = await prisma.product.findMany({
+      where: { storeId: storeId },
+      orderBy: { createdAt: "desc" },
+    });
+      
+      return NextResponse.json({ products }, { status: 200 });  
   } catch (error) {
     console.error(error);
     return NextResponse.json(
