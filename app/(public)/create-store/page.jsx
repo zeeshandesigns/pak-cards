@@ -6,6 +6,8 @@ import toast from "react-hot-toast";
 import Loading from "@/components/Loading";
 import { useRouter } from "next/router";
 import { useAuth } from "@clerk/nextjs";
+import axios from "axios";
+import { useUser } from "@clerk/nextjs/react";
 
 export default function CreateStore() {
   const { user } = useUser();
@@ -40,15 +42,63 @@ export default function CreateStore() {
   const onSubmitHandler = async (e) => {
     e.preventDefault();
       // Logic to submit the store details
-      if (!user)
-      {
-          return toast
-          }
-  };
+      if (!user) {
+          return toast("Please login to create a store");
+      }
 
-  useEffect(() => {
+      try {
+          const token = await getToken();
+          const formData = new FormData();
+
+          formData.append("name", storeInfo.name);
+          formData.append("username", storeInfo.username);
+          formData.append("description", storeInfo.description);
+          formData.append("email", storeInfo.email);
+          formData.append("contact", storeInfo.contact);
+          formData.append("address", storeInfo.address);
+          formData.append("image", storeInfo.image);
+
+          const { data } = await axios.post("/api/store/create", formData, {
+              headers: { Authorization: `Bearer ${token}` },
+          });
+          toast.success(data.message);
+      } catch (error) {
+          toast.error(error?.response?.data?.error || error.message);
+      }
+      useEffect(() => {
+          
+          );
+      });
+  
+  export const getStaticPaths = async () => {
+  
+  
+    return {
+        paths:[],
+        fallback:false
+    }
+  }
+  export const getStaticProps = async (ctx) => {
+  
+  
+    return {
+        props:{
+            data:null
+        }
+    }
+  }
+  
+  export default page;
     fetchSellerStatus();
-  }, []);
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+if (!user) {
+        return (
+    <div className="min-h-[80vh] flex items-center justify-center">
+      <p className="text-slate-500 text-lg">Please <span className="text-slate-500">login</span> to create a store</p>
+    </div>
+  );
+    }
 
   return !loading ? (
     <>
