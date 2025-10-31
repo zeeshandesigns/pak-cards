@@ -11,11 +11,18 @@ export async function GET(request) {
     const store = await prisma.store.findFirst({
       where: { userId: userId },
     });
-      
-      if (!isSeller)
-      {
-          
-          }
+    
+
+    if (!isSeller) {
+      return NextResponse.json(
+        { error: "User is Not a Seller" },
+        { status: 403 }
+      );
+    }
+
+    const storeInfo = await prisma.store.findUnique({
+      where: { userId }
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
