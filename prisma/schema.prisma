@@ -11,11 +11,12 @@ datasource db {
 
 // Required for creating a User: id, name, email, image, cart (optional JSON string)
 model User {
-    id    String @id
-    name  String
-    email String
-    image String
-    cart  Json   @default("{}")
+    id      String  @id
+    name    String
+    email   String
+    image   String
+    cart    Json    @default("{}")
+    isAdmin Boolean @default(false)
 
     // Relations
     ratings     Rating[]
@@ -42,6 +43,10 @@ model Product {
     requiresApproval  Boolean  @default(false)            // true = needs admin verification before delivery
     stockType         String   @default("unlimited")      // "limited" | "unlimited"
     availableCodes    Int      @default(0)                // Count of unused codes in digitalCodes
+    
+    // Rating Fields
+    totalRatings   Int   @default(0)
+    averageRating  Float @default(0)
     
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt

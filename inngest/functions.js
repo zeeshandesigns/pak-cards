@@ -46,3 +46,440 @@ export const syncUserDeletion = inngest.createFunction(
     });
   }
 );
+
+// ============================================
+// GIFT CARD DELIVERY FUNCTIONS
+// ============================================
+
+/**
+ * Auto-delivery function for instant gift card codes
+ * Triggered after payment verification or for COD orders
+ * Assigns available codes from product inventory to the order
+ */
+export const autoDeliverGiftCards = inngest.createFunction(
+  { id: "gift-card-auto-delivery" },
+  { event: "gift-card/auto-delivery" },
+  async ({ event, step }) => {
+    const { orderId, userId } = event.data;
+
+    // Fetch order with items
+    const order = await step.run("fetch-order", async () => {
+      return await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          items: {
+            where: {
+              product: {
+                deliveryType: "instant", // Only instant delivery
+              },
+            },
+            include: {
+              product: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+    });
+
+    if (!order) {
+      throw new Error(`Order ${orderId} not found`);
+    }
+
+    // Process each order item
+    for (const item of order.items) {
+      await step.run(`deliver-codes-${item.id}`, async () => {
+        const { product, quantity } = item;
+
+        // Get available codes from product
+        const availableCodes = product.digitalCodes || [];
+
+        if (availableCodes.length < quantity) {
+          throw new Error(
+            `Not enough codes available for product ${product.name}. Need ${quantity}, have ${availableCodes.length}`
+          );
+        }
+
+        // Take the required number of codes
+        const codesToDeliver = availableCodes.slice(0, quantity);
+        const remainingCodes = availableCodes.slice(quantity);
+
+        // Create DeliveredCode records
+        const deliveredCodes = await Promise.all(
+          codesToDeliver.map((code) =>
+            prisma.deliveredCode.create({
+              data: {
+                code,
+                orderId: order.id,
+                orderItemId: item.id,
+                productId: product.id,
+                userId,
+              },
+            })
+          )
+        );
+
+        // Update product inventory
+        await prisma.product.update({
+          where: { id: product.id },
+          data: {
+            digitalCodes: remainingCodes,
+            availableCodes: remainingCodes.length,
+            inStock: remainingCodes.length > 0,
+          },
+        });
+
+        return deliveredCodes;
+      });
+    }
+
+    // Update order status to completed
+    await step.run("complete-order", async () => {
+      return await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: "completed",
+          completedAt: new Date(),
+        },
+      });
+    });
+
+    // Send code delivery email
+    await step.run("send-code-email", async () => {
+      await inngest.send({
+        name: "email/code-delivery",
+        data: {
+          orderId,
+          userId,
+          userEmail: order.user.email,
+          userName: order.user.name,
+        },
+      });
+    });
+
+    return { success: true, orderId, codesDelivered: order.items.length };
+  }
+);
+
+/**
+ * Manual delivery notification function
+ * Notifies sellers about orders that need manual fulfillment
+ * For physical gift cards that need to be shipped
+ */
+export const notifyManualDelivery = inngest.createFunction(
+  { id: "gift-card-manual-delivery" },
+  { event: "gift-card/manual-delivery" },
+  async ({ event, step }) => {
+    const { orderId, userId } = event.data;
+
+    // Fetch order with manual delivery items
+    const order = await step.run("fetch-order", async () => {
+      return await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          items: {
+            where: {
+              product: {
+                deliveryType: "manual", // Only manual delivery
+              },
+            },
+            include: {
+              product: true,
+              store: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+    });
+
+    if (!order) {
+      throw new Error(`Order ${orderId} not found`);
+    }
+
+    // Group items by store
+    const itemsByStore = order.items.reduce((acc, item) => {
+      const storeId = item.storeId;
+      if (!acc[storeId]) {
+        acc[storeId] = {
+          store: item.store,
+          items: [],
+        };
+      }
+      acc[storeId].items.push(item);
+      return acc;
+    }, {});
+
+    // Send notification to each seller
+    for (const [storeId, data] of Object.entries(itemsByStore)) {
+      await step.run(`notify-seller-${storeId}`, async () => {
+        // TODO: Send email to seller with order details
+        // This would include customer shipping address, items ordered, etc.
+        console.log(`Notifying seller of store ${data.store.name}`, {
+          sellerEmail: data.store.user.email,
+          orderId: order.id,
+          items: data.items.length,
+        });
+
+        // Update order items to "awaiting_shipment"
+        await Promise.all(
+          data.items.map((item) =>
+            prisma.orderItem.update({
+              where: { id: item.id },
+              data: { status: "awaiting_shipment" },
+            })
+          )
+        );
+      });
+    }
+
+    // Update order status to processing
+    await step.run("update-order-status", async () => {
+      return await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: "processing",
+        },
+      });
+    });
+
+    return {
+      success: true,
+      orderId,
+      sellersNotified: Object.keys(itemsByStore).length,
+    };
+  }
+);
+
+// ============================================
+// EMAIL NOTIFICATION FUNCTIONS
+// ============================================
+
+/**
+ * Order confirmation email
+ * Sent immediately after order is placed
+ * Includes order summary and next steps
+ */
+export const sendOrderConfirmation = inngest.createFunction(
+  { id: "email-order-confirmation" },
+  { event: "email/order-confirmation" },
+  async ({ event, step }) => {
+    const { orderId, userEmail, userName } = event.data;
+
+    // Fetch order details
+    const order = await step.run("fetch-order", async () => {
+      return await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          items: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                  price: true,
+                  deliveryType: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+
+    if (!order) {
+      throw new Error(`Order ${orderId} not found`);
+    }
+
+    // Send email
+    await step.run("send-email", async () => {
+      // TODO: Integrate with email service (SendGrid, Resend, etc.)
+      console.log("Sending order confirmation email:", {
+        to: userEmail,
+        subject: `Order Confirmation #${order.id.slice(0, 8)}`,
+        orderTotal: order.totalAmount,
+        paymentMethod: order.paymentMethod,
+        itemCount: order.items.length,
+      });
+
+      // Email content would include:
+      // - Order ID and date
+      // - Payment method and amount
+      // - List of items ordered
+      // - Expected delivery timeline
+      // - Payment proof status (if bank transfer)
+      // - Next steps (e.g., "We're verifying your payment")
+
+      return { success: true };
+    });
+
+    return { success: true, emailSent: userEmail };
+  }
+);
+
+/**
+ * Gift card code delivery email
+ * Sent after codes are assigned to the order
+ * Contains the actual gift card codes
+ */
+export const sendCodeDelivery = inngest.createFunction(
+  { id: "email-code-delivery" },
+  { event: "email/code-delivery" },
+  async ({ event, step }) => {
+    const { orderId, userId, userEmail, userName } = event.data;
+
+    // Fetch delivered codes
+    const deliveredCodes = await step.run("fetch-codes", async () => {
+      return await prisma.deliveredCode.findMany({
+        where: {
+          orderId,
+          userId,
+        },
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              category: true,
+            },
+          },
+        },
+      });
+    });
+
+    if (deliveredCodes.length === 0) {
+      throw new Error(`No codes found for order ${orderId}`);
+    }
+
+    // Group codes by product
+    const codesByProduct = deliveredCodes.reduce((acc, dc) => {
+      const productId = dc.productId;
+      if (!acc[productId]) {
+        acc[productId] = {
+          product: dc.product,
+          codes: [],
+        };
+      }
+      acc[productId].codes.push(dc.code);
+      return acc;
+    }, {});
+
+    // Send email with codes
+    await step.run("send-email", async () => {
+      // TODO: Integrate with email service
+      console.log("Sending gift card codes email:", {
+        to: userEmail,
+        subject: "Your Gift Card Codes Are Ready! 🎉",
+        orderId: orderId.slice(0, 8),
+        productCount: Object.keys(codesByProduct).length,
+        totalCodes: deliveredCodes.length,
+      });
+
+      // Email content would include:
+      // - Congratulations message
+      // - Order ID
+      // - List of products with their codes
+      // - Instructions on how to redeem
+      // - Terms and conditions
+      // - Customer support contact
+
+      // Example structure:
+      Object.entries(codesByProduct).forEach(([productId, data]) => {
+        console.log(`  ${data.product.name}:`, data.codes);
+      });
+
+      return { success: true };
+    });
+
+    return {
+      success: true,
+      emailSent: userEmail,
+      codesDelivered: deliveredCodes.length,
+    };
+  }
+);
+
+/**
+ * Payment verification email (approved)
+ * Sent when admin verifies bank transfer payment
+ */
+export const sendPaymentVerified = inngest.createFunction(
+  { id: "email-payment-verified" },
+  { event: "email/payment-verified" },
+  async ({ event, step }) => {
+    const { orderId, userEmail, userName } = event.data;
+
+    await step.run("send-email", async () => {
+      console.log("Sending payment verified email:", {
+        to: userEmail,
+        subject: "Payment Verified - Your Order is Being Processed! ✅",
+        orderId: orderId.slice(0, 8),
+      });
+
+      // Email content:
+      // - Payment confirmed message
+      // - Order now being processed
+      // - Expected delivery timeline
+      // - Thank you message
+
+      return { success: true };
+    });
+
+    return { success: true, emailSent: userEmail };
+  }
+);
+
+/**
+ * Payment rejection email
+ * Sent when admin rejects bank transfer payment
+ */
+export const sendPaymentRejected = inngest.createFunction(
+  { id: "email-payment-rejected" },
+  { event: "email/payment-rejected" },
+  async ({ event, step }) => {
+    const { orderId, userEmail, userName, reason } = event.data;
+
+    await step.run("send-email", async () => {
+      console.log("Sending payment rejected email:", {
+        to: userEmail,
+        subject: "Payment Verification Issue - Action Required",
+        orderId: orderId.slice(0, 8),
+        reason,
+      });
+
+      // Email content:
+      // - Payment could not be verified
+      // - Reason for rejection
+      // - Instructions to contact support
+      // - How to place a new order
+
+      return { success: true };
+    });
+
+    return { success: true, emailSent: userEmail };
+  }
+);

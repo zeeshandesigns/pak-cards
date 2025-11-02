@@ -1,12 +1,13 @@
 "use client";
 import { assets } from "@/assets/assets";
+
 import { ArrowRightIcon, ChevronRightIcon } from "lucide-react";
 import Image from "next/image";
 import React from "react";
 import CategoriesMarquee from "./CategoriesMarquee";
 
 const Hero = () => {
-  const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || "₨"; // symbol for PKR - ₨
+  const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || "₨"; //
 
   return (
     <div className="mx-4 sm:mx-6">

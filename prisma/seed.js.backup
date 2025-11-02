@@ -1,12 +1,10 @@
-const { PrismaClient } = require("@prisma/client");
+﻿const { PrismaClient } = require("@prisma/client");
 
 // Use DIRECT_URL for seeding (bypasses pooler and Optimize extension)
 const directUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
 
 if (!directUrl) {
-  throw new Error(
-    "DATABASE_URL or DIRECT_URL environment variable is required"
-  );
+  throw new Error("DATABASE_URL or DIRECT_URL environment variable is required");
 }
 
 const prisma = new PrismaClient({
@@ -18,34 +16,22 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  console.log("🌱 Starting seed for PakCards Gift Card Marketplace...\n");
+  console.log("ðŸŒ± Starting seed for PakCards Gift Card Marketplace...\n");
 
-  // Clear existing data
-  console.log("🗑️  Clearing existing data...");
+  // Clear existing data (optional - comment out if you want to keep existing data)
+  console.log("ðŸ—‘ï¸  Clearing existing data...");
   await prisma.deliveredCode.deleteMany({});
   await prisma.rating.deleteMany({});
   await prisma.orderItem.deleteMany({});
   await prisma.order.deleteMany({});
-  await prisma.address.deleteMany({});
   await prisma.product.deleteMany({});
-  await prisma.coupon.deleteMany({});
   await prisma.store.deleteMany({});
+  await prisma.coupon.deleteMany({});
   await prisma.user.deleteMany({});
-  console.log("✅ Cleared existing data\n");
+  console.log("âœ… Cleared existing data\n");
 
   // Create test users
-  console.log("👥 Creating users...");
-
-  // Admin User (Platform Administrator)
-  const admin = await prisma.user.create({
-    data: {
-      id: "user_admin_001",
-      name: "Admin User",
-      email: "admin@pakcards.com",
-      image: "https://i.pravatar.cc/150?img=60",
-      isAdmin: true,
-    },
-  });
+  console.log("ðŸ‘¥ Creating users...");
 
   // Store Owner 1
   const owner1 = await prisma.user.create({
@@ -54,7 +40,6 @@ async function main() {
       name: "Ahmed Khan",
       email: "ahmed@pakcards.com",
       image: "https://i.pravatar.cc/150?img=12",
-      isAdmin: false,
     },
   });
 
@@ -65,7 +50,6 @@ async function main() {
       name: "Sara Ali",
       email: "sara@giftcards.pk",
       image: "https://i.pravatar.cc/150?img=5",
-      isAdmin: false,
     },
   });
 
@@ -76,7 +60,6 @@ async function main() {
       name: "Hassan Raza",
       email: "hassan@example.com",
       image: "https://i.pravatar.cc/150?img=33",
-      isAdmin: false,
     },
   });
 
@@ -86,7 +69,6 @@ async function main() {
       name: "Ayesha Malik",
       email: "ayesha@example.com",
       image: "https://i.pravatar.cc/150?img=10",
-      isAdmin: false,
     },
   });
 
@@ -96,14 +78,13 @@ async function main() {
       name: "Ali Imran",
       email: "ali@example.com",
       image: "https://i.pravatar.cc/150?img=15",
-      isAdmin: false,
     },
   });
 
-  console.log("✅ Created 6 users (1 admin, 2 store owners, 3 customers)\n");
+  console.log(`âœ… Created ${5} users (2 owners, 3 customers)\n`);
 
   // Create stores
-  console.log("🏪 Creating stores...");
+  console.log("ðŸª Creating stores...");
 
   const store1 = await prisma.store.create({
     data: {
@@ -111,13 +92,12 @@ async function main() {
       name: "PakCards Official",
       username: "pakcards-official",
       description:
-        "Official PakCards store offering premium digital gift cards for gaming, entertainment, and shopping. Fast delivery guaranteed!",
+        "Your trusted source for digital gift cards in Pakistan. Instant delivery and best prices!",
       address: "Clifton, Karachi, Pakistan",
       logo: "https://via.placeholder.com/200/4CAF50/FFFFFF?text=PakCards",
       email: "support@pakcards.com",
       contact: "+92-300-1234567",
       status: "approved",
-      isActive: true,
     },
   });
 
@@ -133,7 +113,6 @@ async function main() {
       email: "info@giftcardshub.pk",
       contact: "+92-321-9876543",
       status: "approved",
-      isActive: true,
     },
   });
 
@@ -145,20 +124,19 @@ async function main() {
       username: "new-seller-2024",
       description: "Just starting out with gift cards!",
       address: "Islamabad, Pakistan",
-      logo: "https://via.placeholder.com/200/FF9800/FFFFFF?text=NewStore",
-      email: "hassan@example.com",
-      contact: "+92-333-1111111",
+      logo: "https://via.placeholder.com/200/FF9800/FFFFFF?text=New",
+      email: "new@seller.com",
+      contact: "+92-345-5555555",
       status: "pending",
-      isActive: false,
     },
   });
 
-  console.log("✅ Created 3 stores (2 approved, 1 pending)\n");
+  console.log(`âœ… Created ${3} stores (2 approved, 1 pending)\n`);
 
   // Create coupons
-  console.log("🎟️  Creating coupons...");
+  console.log("ðŸŽŸï¸  Creating coupons...");
 
-  await prisma.coupon.create({
+  const coupon1 = await prisma.coupon.create({
     data: {
       code: "WELCOME10",
       description: "10% off on your first purchase",
@@ -170,10 +148,10 @@ async function main() {
     },
   });
 
-  await prisma.coupon.create({
+  const coupon2 = await prisma.coupon.create({
     data: {
       code: "SAVE200",
-      description: "₨200 flat discount",
+      description: "â‚¨200 flat discount",
       discount: 200,
       forNewUser: false,
       forMember: true,
@@ -182,28 +160,26 @@ async function main() {
     },
   });
 
-  console.log("✅ Created 2 active coupons\n");
+  console.log(`âœ… Created 2 active coupons\n`);
 
-  // Gift card code arrays
+  // Sample gift card codes for different products
   const steamCodes = [
     "STEAM-1000-XXXX-YYYY-ZZZZ",
     "STEAM-1000-AAAA-BBBB-CCCC",
     "STEAM-1000-DDDD-EEEE-FFFF",
   ];
-
-  const playstationCodes = ["PS-5000-XXXX-YYYY-ZZZZ", "PS-5000-AAAA-BBBB-CCCC"];
-
+  const playstationCodes = [
+    "PSN-5000-XXXX-YYYY-ZZZZ",
+    "PSN-5000-AAAA-BBBB-CCCC",
+  ];
   const netflixCodes = [
     "NETFLIX-500-XXXX-YYYY",
     "NETFLIX-500-AAAA-BBBB",
     "NETFLIX-500-CCCC-DDDD",
     "NETFLIX-500-EEEE-FFFF",
   ];
-
-  const amazonCodes = ["AMAZON-10K-XXXX-YYYY-ZZZZ"];
-
+  const amazonCodes = ["AMZN-10000-XXXX-YYYY-ZZZZ"];
   const spotifyCodes = ["SPOTIFY-300-XXXX-YYYY", "SPOTIFY-300-AAAA-BBBB"];
-
   const googlePlayCodes = [
     "GPLAY-2000-XXXX-YYYY-ZZZZ",
     "GPLAY-2000-AAAA-BBBB-CCCC",
@@ -211,14 +187,14 @@ async function main() {
   ];
 
   // Create gift card products
-  console.log("🎮 Creating gift card products...");
+  console.log("ðŸŽ® Creating gift card products...");
 
   const products = [
     {
       storeId: store1.id,
-      name: "Steam Wallet ₨1000",
+      name: "Steam Wallet â‚¨1000",
       description:
-        "₨1000 Steam Wallet Code - Instant delivery within 10 minutes. Use to purchase games, software, and other content on Steam platform.",
+        "â‚¨1000 Steam Wallet Code - Instant delivery within 10 minutes after payment verification. Use to purchase games, software, and other content on Steam platform.",
       mrp: 1200,
       price: 1000,
       category: "gaming",
@@ -226,19 +202,15 @@ async function main() {
         "https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg",
       ],
       deliveryType: "instant",
-      digitalCodes: JSON.stringify(
-        steamCodes.map((code) => ({ code, used: false, orderId: null }))
-      ),
+      digitalCodes: JSON.stringify(steamCodes.map(code => ({code, used: false, orderId: null}))),
       availableCodes: steamCodes.length,
       inStock: true,
-      totalRatings: 0,
-      averageRating: 0,
     },
     {
       storeId: store1.id,
-      name: "PlayStation Store ₨5000",
+      name: "PlayStation Store â‚¨5000",
       description:
-        "₨5000 PlayStation Store Gift Card - Manual verification. Can be used to purchase games, add-ons, and subscriptions on PlayStation Store.",
+        "â‚¨5000 PlayStation Store Gift Card - Manual verification. Can be used to purchase games, add-ons, and subscriptions on PlayStation Store.",
       mrp: 5500,
       price: 5000,
       category: "gaming",
@@ -246,17 +218,13 @@ async function main() {
         "https://upload.wikimedia.org/wikipedia/commons/0/00/PlayStation_logo.svg",
       ],
       deliveryType: "manual",
-      digitalCodes: JSON.stringify(
-        playstationCodes.map((code) => ({ code, used: false, orderId: null }))
-      ),
+      digitalCodes: JSON.stringify(playstationCodes.map(code => ({code, used: false, orderId: null}))),
       availableCodes: playstationCodes.length,
       inStock: true,
-      totalRatings: 0,
-      averageRating: 0,
     },
     {
       storeId: store2.id,
-      name: "Netflix Premium ₨500/Month",
+      name: "Netflix Premium â‚¨500/Month",
       description:
         "Netflix Premium 1 Month Subscription Code - Instant delivery. Enjoy unlimited movies and TV shows on 4 screens in Ultra HD.",
       mrp: 600,
@@ -266,19 +234,15 @@ async function main() {
         "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg",
       ],
       deliveryType: "instant",
-      digitalCodes: JSON.stringify(
-        netflixCodes.map((code) => ({ code, used: false, orderId: null }))
-      ),
+      digitalCodes: JSON.stringify(netflixCodes.map(code => ({code, used: false, orderId: null}))),
       availableCodes: netflixCodes.length,
       inStock: true,
-      totalRatings: 0,
-      averageRating: 0,
     },
     {
       storeId: store2.id,
-      name: "Amazon Gift Card ₨10000",
+      name: "Amazon Gift Card â‚¨10000",
       description:
-        "₨10,000 Amazon Gift Card - Can be used to purchase any products on Amazon.com.",
+        "â‚¨10,000 Amazon Gift Card - Can be used to purchase any products on Amazon.com.",
       mrp: 10500,
       price: 10000,
       category: "shopping",
@@ -286,17 +250,13 @@ async function main() {
         "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg",
       ],
       deliveryType: "manual",
-      digitalCodes: JSON.stringify(
-        amazonCodes.map((code) => ({ code, used: false, orderId: null }))
-      ),
+      digitalCodes: JSON.stringify(amazonCodes.map(code => ({code, used: false, orderId: null}))),
       availableCodes: amazonCodes.length,
       inStock: true,
-      totalRatings: 0,
-      averageRating: 0,
     },
     {
       storeId: store1.id,
-      name: "Spotify Premium ₨300/Month",
+      name: "Spotify Premium â‚¨300/Month",
       description:
         "Spotify Premium 1 Month Code - Instant delivery. Ad-free music, offline listening, and unlimited skips.",
       mrp: 350,
@@ -306,19 +266,15 @@ async function main() {
         "https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg",
       ],
       deliveryType: "instant",
-      digitalCodes: JSON.stringify(
-        spotifyCodes.map((code) => ({ code, used: false, orderId: null }))
-      ),
+      digitalCodes: JSON.stringify(spotifyCodes.map(code => ({code, used: false, orderId: null}))),
       availableCodes: spotifyCodes.length,
       inStock: true,
-      totalRatings: 0,
-      averageRating: 0,
     },
     {
       storeId: store2.id,
-      name: "Google Play ₨2000",
+      name: "Google Play â‚¨2000",
       description:
-        "₨2000 Google Play Gift Card - Instant delivery. Use for apps, games, music, movies, and more on Google Play Store.",
+        "â‚¨2000 Google Play Gift Card - Instant delivery. Use for apps, games, music, movies, and more on Google Play Store.",
       mrp: 2200,
       price: 2000,
       category: "shopping",
@@ -326,13 +282,9 @@ async function main() {
         "https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg",
       ],
       deliveryType: "instant",
-      digitalCodes: JSON.stringify(
-        googlePlayCodes.map((code) => ({ code, used: false, orderId: null }))
-      ),
+      digitalCodes: JSON.stringify(googlePlayCodes.map(code => ({code, used: false, orderId: null}))),
       availableCodes: googlePlayCodes.length,
       inStock: true,
-      totalRatings: 0,
-      averageRating: 0,
     },
   ];
 
@@ -344,31 +296,24 @@ async function main() {
     createdProducts.push(product);
 
     const deliveryBadge =
-      product.deliveryType === "instant" ? "⚡ Instant" : "📦 Manual";
+      product.deliveryType === "instant" ? "âš¡ Instant" : "ï¿½ Manual";
     console.log(
-      `✅ ${product.name} - ₨${product.price} - ${deliveryBadge} - ${product.availableCodes} codes`
+      `âœ… ${product.name} - â‚¨${product.price} - ${deliveryBadge} - ${product.availableCodes} codes`
     );
   }
-  console.log(`\n✅ Created ${createdProducts.length} products\n`);
+  console.log(`\nâœ… Created ${createdProducts.length} products\n`);
 
-  console.log("\n✨ Seeding completed successfully!");
-  console.log("\n📊 Summary:");
-  console.log(`   - 6 users (1 admin, 2 sellers, 3 customers)`);
+  console.log("\nâœ¨ Seeding completed successfully!");
+  console.log("\nðŸ“Š Summary:");
+  console.log(`   - 5 users (2 sellers, 3 customers)`);
   console.log(`   - 3 stores (2 approved, 1 pending)`);
   console.log(`   - 2 active coupons (WELCOME10, SAVE200)`);
   console.log(`   - 6 products with gift card codes`);
-  console.log(`   - Total codes available: 15`);
   console.log(
-    "\n🚀 Database ready! All 23 API endpoints and 6 Inngest functions can now be tested!\n"
+    "\nðŸš€ Ready to test all 23 API endpoints and 6 Inngest functions!\n"
   );
-  console.log("💡 Admin credentials: user_admin_001 (admin@pakcards.com)\n");
+  console.log("ðŸ’¡ Note: Orders and ratings can be created through the APIs for testing.\n");
 }
 
-main()
-  .catch((e) => {
-    console.error("❌ Error seeding database:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+
+main().catch((e) => {console.error('Error seeding:', e);process.exit(1);}).finally(async () => {await prisma.$disconnect();});
