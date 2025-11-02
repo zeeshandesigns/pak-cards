@@ -35,25 +35,41 @@ model Product {
     category    String
     inStock     Boolean  @default(true)
     storeId     String
+    
+    // Gift Card Delivery Fields
+    deliveryType      String   @default("physical")       // "physical" | "auto_delivery" | "manual_verification"
+    digitalCodes      Json     @default("[]")             // Array of code objects: [{code: "XXX", used: false, orderId: null}]
+    requiresApproval  Boolean  @default(false)            // true = needs admin verification before delivery
+    stockType         String   @default("unlimited")      // "limited" | "unlimited"
+    availableCodes    Int      @default(0)                // Count of unused codes in digitalCodes
+    
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
 
     // Relations
-    store      Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
-    orderItems OrderItem[]
-    rating     Rating[]
+    store          Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+    orderItems     OrderItem[]
+    rating         Rating[]
+    deliveredCodes DeliveredCode[]
 }
 
 enum OrderStatus {
-    ORDER_PLACED
-    PROCESSING
-    SHIPPED
-    DELIVERED
+    ORDER_PLACED          // Initial order created
+    PAYMENT_PENDING       // Waiting for bank transfer
+    PAYMENT_SUBMITTED     // User uploaded payment proof
+    PAYMENT_VERIFIED      // Admin verified payment (or auto-verified)
+    PAYMENT_REJECTED      // Admin rejected payment
+    PROCESSING            // Order being processed
+    CODE_DELIVERED        // Digital code delivered to user
+    SHIPPED               // Physical product shipped
+    DELIVERED             // Order completed
+    CANCELLED             // Order cancelled
 }
 
 enum PaymentMethod {
     COD
     STRIPE
+    BANK_TRANSFER         // New: Bank transfer payment
 }
 
 // Required for creating an Order: total, userId, storeId, addressId, isPaid, paymentMethod, isCouponUsed, coupon (JSON), orderItems (nested)
@@ -66,6 +82,14 @@ model Order {
     addressId     String
     isPaid        Boolean       @default(false)
     paymentMethod PaymentMethod
+    
+    // Payment Verification Fields (for Bank Transfer)
+    paymentProof      String?       // URL to uploaded payment screenshot
+    paymentReference  String?       // Bank transaction reference number
+    verifiedBy        String?       // Admin userId who verified
+    verifiedAt        DateTime?     // When payment was verified
+    rejectionReason   String?       // Why payment was rejected (if rejected)
+    
     createdAt     DateTime      @default(now())
     updatedAt     DateTime      @updatedAt
     isCouponUsed  Boolean       @default(false)
@@ -73,21 +97,24 @@ model Order {
     orderItems    OrderItem[]
 
     // Relations
-    user    User    @relation("BuyerRelation", fields: [userId], references: [id])
-    store   Store   @relation(fields: [storeId], references: [id])
-    address Address @relation(fields: [addressId], references: [id])
+    user           User            @relation("BuyerRelation", fields: [userId], references: [id])
+    store          Store           @relation(fields: [storeId], references: [id])
+    address        Address         @relation(fields: [addressId], references: [id])
+    deliveredCodes DeliveredCode[]
 }
 
 // Required for creating an OrderItem: orderId, productId, quantity, price
 model OrderItem {
     orderId   String
     productId String
+    storeId   String
     quantity  Int
     price     Float
 
     // Relations
     order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
     product Product @relation(fields: [productId], references: [id])
+    store   Store   @relation(fields: [storeId], references: [id])
 
     @@id([orderId, productId])
 }
@@ -157,7 +184,28 @@ model Store {
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
 
-    Product Product[]
-    Order   Order[]
-    user    User      @relation(fields: [userId], references: [id])
+    Product   Product[]
+    Order     Order[]
+    OrderItem OrderItem[]
+    user      User        @relation(fields: [userId], references: [id])
+}
+
+// New Model: Track delivered gift card codes
+model DeliveredCode {
+    id            String    @id @default(cuid())
+    orderId       String
+    productId     String
+    userId        String
+    code          String    // The actual gift card code/PIN
+    deliveredAt   DateTime  @default(now())
+    viewedAt      DateTime? // Track when user first viewed the code
+    
+    // Relations
+    order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+    
+    // Indexes for faster queries
+    @@index([orderId])
+    @@index([userId])
+    @@index([productId])
 }

@@ -1,24 +1,40 @@
-'use client'
-import React from 'react'
-import Title from './Title'
-import ProductCard from './ProductCard'
-import { useSelector } from 'react-redux'
+"use client";
+import React from "react";
+import Title from "./Title";
+import ProductCard from "./ProductCard";
+import { useSelector } from "react-redux";
 
 const LatestProducts = () => {
+  const products = useSelector((state) => state.product.list);
 
-    const displayQuantity = 4
-    const products = useSelector(state => state.product.list)
+  return (
+    <div className="px-4 sm:px-6 my-16 sm:my-20 max-w-7xl mx-auto">
+      <Title
+        title="All Gift Cards"
+        description={`${products.length} gift cards available for instant purchase`}
+        visibleButton={false}
+      />
 
-    return (
-        <div className='px-6 my-30 max-w-6xl mx-auto'>
-            <Title title='Latest Products' description={`Showing ${products.length < displayQuantity ? products.length : displayQuantity} of ${products.length} products`} href='/shop' />
-            <div className='mt-12 grid grid-cols-2 sm:flex flex-wrap gap-6 justify-between'>
-                {products.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, displayQuantity).map((product, index) => (
-                    <ProductCard key={index} product={product} />
-                ))}
-            </div>
+      {/* Mobile-first responsive grid: 2 cols mobile, 3-5 cols desktop */}
+      <div className="mt-8 sm:mt-12 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+        {products.map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+
+      {/* Show message if no products */}
+      {products.length === 0 && (
+        <div className="text-center py-12 sm:py-20 text-slate-500">
+          <p className="text-lg sm:text-xl">
+            No gift cards available at the moment
+          </p>
+          <p className="text-xs sm:text-sm mt-2">
+            Check back soon for new cards!
+          </p>
         </div>
-    )
-}
+      )}
+    </div>
+  );
+};
 
-export default LatestProducts
+export default LatestProducts;

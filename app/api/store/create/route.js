@@ -1,124 +1,144 @@
-import { auth, getAuth } from "@clerk/nextjs/server";
+import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import ImageKit from "imagekit";
-import imageki from "@/configs/imagekit";
-import next from "next";
+import prisma from "@/lib/prisma";
+import imagekit from "@/configs/imagekit";
 
-// creating the store
+/**
+ * POST /api/store/create
+ * Create a new gift card store
+ */
 export async function POST(request) {
   try {
-    const { userId } = getAuth(request);
-    const storeId = await authSeller(userId);
+    const { userId } = await getAuth(request);
 
-    if (!storeId) {
+    if (!userId) {
       return NextResponse.json({ error: "Not Authorized" }, { status: 401 });
     }
 
-    // get form data
+    // Check if the user already has a store
+    const existingStore = await prisma.store.findFirst({
+      where: { userId },
+    });
+
+    // If store exists, return its status
+    if (existingStore) {
+      return NextResponse.json(
+        {
+          success: true,
+          message: "Store already exists",
+          status: existingStore.status,
+          storeId: existingStore.id,
+        },
+        { status: 200 }
+      );
+    }
+
+    // Get form data
     const formData = await request.formData();
     const name = formData.get("name");
-    const userName = formData.get("userName");
+    const username = formData.get("userName");
     const description = formData.get("description");
     const email = formData.get("email");
     const address = formData.get("address");
-    const image = formData.get("image");
     const contact = formData.get("contact");
+    const image = formData.get("image");
 
-    if (!name || !userName || !description || !email || !address || !contact) {
+    // Validate required fields
+    if (!name || !username || !description || !email || !address || !contact) {
       return NextResponse.json(
-        { error: "Missing Store Information" },
+        {
+          error: "Missing required fields",
+          required: [
+            "name",
+            "userName",
+            "description",
+            "email",
+            "address",
+            "contact",
+          ],
+        },
         { status: 400 }
       );
     }
 
-    // check if the user already has a store
-    const store = await prisma.store.findFirst({
-      where: { userId: userId },
+    // Check if username is taken
+    const isUsernameTaken = await prisma.store.findFirst({
+      where: { username: username.toLowerCase() },
     });
 
-    // if store is already present, return status of the store
-    if (store) {
-      return NextResponse.json({ status: store.status }, { status: 200 });
-    }
-
-    // check if the userName is already taken
-    const isUserNameTaken = await prisma.store.findFirst({
-      where: { userName: userName.toLowerCase() },
-    });
-    if (isUserNameTaken) {
+    if (isUsernameTaken) {
       return NextResponse.json(
-        { error: "UserName is already taken" },
+        {
+          error: "Username is already taken",
+        },
         { status: 400 }
       );
     }
 
-    // uploading images to imagekit
-    const imagesURL = await Promise.all(
-      images.map(async (image) => {
-        const buffer = buffer.from(await image.arrayBuffer());
+    // Upload logo to ImageKit if provided
+    let logoUrl = "https://via.placeholder.com/200";
+    if (image && image.size > 0) {
+      try {
+        const buffer = Buffer.from(await image.arrayBuffer());
         const response = await imagekit.upload({
           file: buffer,
-          fileName: image.name,
-          folder: "products/",
+          fileName: `store_${username}_${Date.now()}.${
+            image.type.split("/")[1]
+          }`,
+          folder: "stores/logos/",
         });
-        const url = imagekit.url({
+
+        logoUrl = imagekit.url({
           path: response.filePath,
           transformation: [
             { quality: "auto" },
             { format: "webp" },
-            { width: "1024" },
+            { width: "400" },
+            { height: "400" },
           ],
         });
-        return url;
-      })
-    );
+      } catch (uploadError) {
+        console.error("ImageKit upload error:", uploadError);
+        // Continue with placeholder if upload fails
+      }
+    }
 
-    await prisma.product.create({
+    // Create store with pending status
+    const store = await prisma.store.create({
       data: {
+        userId,
         name,
+        username: username.toLowerCase(),
         description,
-        mrp,
-        images: imagesURL,
-        price,
-        category,
-        storeId,
+        email,
+        address,
+        contact,
+        logo: logoUrl,
+        status: "pending", // Requires admin approval
       },
     });
 
     return NextResponse.json(
-      { message: "Product Created Successfully" },
+      {
+        success: true,
+        message: "Store created successfully. Awaiting admin approval.",
+        store: {
+          id: store.id,
+          name: store.name,
+          username: store.username,
+          status: store.status,
+        },
+      },
       { status: 201 }
     );
   } catch (error) {
-    console.error(error);
+    console.error("Error creating store:", error);
     return NextResponse.json(
-      { error: error.code || error.message },
-      { status: 400 }
-    );
-  }
-}
-
-// get all products for a seller
-export async function GET(request) {
-  try {
-    const { userId } = getAuth(request);
-    const storeId = await authSeller(userId);
-
-    if (!storeId) {
-      return NextResponse.json({ error: "Not Authorized" }, { status: 401 });
-    }
-    const products = await prisma.product.findMany({
-      where: { storeId: storeId },
-      orderBy: { createdAt: "desc" },
-    });
-      
-      return NextResponse.json({ products }, { status: 200 });  
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: error.code || error.message },
-      { status: 400 }
+      {
+        error: "Failed to create store",
+        message: error.message,
+      },
+      { status: 500 }
     );
   }
 }

@@ -7,7 +7,11 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "seed": "node prisma/seed.js"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.34.0",
@@ -15,6 +19,7 @@
     "@neondatabase/serverless": "^1.0.2",
     "@prisma/adapter-neon": "^6.18.0",
     "@prisma/client": "^6.18.0",
+    "@prisma/extension-optimize": "^2.0.0",
     "@reduxjs/toolkit": "^2.8.2",
     "axios": "^1.13.1",
     "date-fns": "^4.1.0",

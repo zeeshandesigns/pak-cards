@@ -1,18 +1,21 @@
-'use client'
-import BestSelling from "@/components/BestSelling";
+"use client";
 import Hero from "@/components/Hero";
 import Newsletter from "@/components/Newsletter";
-import OurSpecs from "@/components/OurSpec";
 import LatestProducts from "@/components/LatestProducts";
+import BestSelling from "@/components/BestSelling";
+import OurSpecs from "@/components/OurSpec";
+import { useSelector } from "react-redux";
 
 export default function Home() {
-    return (
-        <div>
-            <Hero />
-            <LatestProducts />
-            <BestSelling />
-            <OurSpecs />
-            <Newsletter />
-        </div>
-    );
+  const products = useSelector((state) => state.product.list);
+
+  return (
+    <div>
+      <Hero />
+      <BestSelling />
+      <LatestProducts />
+      <OurSpecs />
+      <Newsletter />
+    </div>
+  );
 }
