@@ -1,17 +1,14 @@
 import StoreLayout from "@/components/store/StoreLayout";
 
 export const metadata = {
-    title: "GoCart. - Store Dashboard",
-    description: "GoCart. - Store Dashboard",
+  title: "PakCards - Store Dashboard",
+  description: "PakCards Seller Dashboard - Manage your gift card store",
 };
 
 export default function RootAdminLayout({ children }) {
-
-    return (
-        <>
-            <StoreLayout>
-                {children}
-            </StoreLayout>
-        </>
-    );
+  return (
+    <>
+      <StoreLayout>{children}</StoreLayout>
+    </>
+  );
 }

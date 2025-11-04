@@ -153,17 +153,16 @@ const Footer = () => {
     {
       title: "CATEGORIES",
       links: [
-        { text: "Gaming Cards", path: "/shop", icon: null },
-        { text: "Shopping Cards", path: "/shop", icon: null },
-        { text: "Entertainment", path: "/shop", icon: null },
-        { text: "Food & Dining", path: "/shop", icon: null },
+        { text: "Gaming Cards", path: "/", icon: null },
+        { text: "Shopping Cards", path: "/", icon: null },
+        { text: "Entertainment", path: "/", icon: null },
+        { text: "Food & Dining", path: "/", icon: null },
       ],
     },
     {
       title: "QUICK LINKS",
       links: [
         { text: "Home", path: "/", icon: null },
-        { text: "All Gift Cards", path: "/shop", icon: null },
         { text: "My Orders", path: "/orders", icon: null },
         { text: "Become a Seller", path: "/create-store", icon: null },
       ],

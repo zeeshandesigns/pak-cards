@@ -7,8 +7,9 @@ import { ClerkProvider } from "@clerk/nextjs";
 const outfit = Outfit({ subsets: ["latin"], weight: ["400", "500", "600"] });
 
 export const metadata = {
-  title: "PakCards - Shop Pakistani",
-  description: "GoCart. - Shop smarter",
+  title: "PakCards - Pakistan's Gift Card Marketplace",
+  description:
+    "Buy and sell digital gift cards instantly. Gaming, shopping, entertainment and more. Fast, secure, trusted.",
 };
 
 export default function RootLayout({ children }) {

@@ -72,7 +72,7 @@ export async function GET(request) {
 
     // Calculate average rating for each product
     const productsWithRating = products.map((product) => {
-      const ratings = product.rating;
+      const ratings = product.rating || [];
       const avgRating =
         ratings.length > 0
           ? ratings.reduce((acc, r) => acc + r.rating, 0) / ratings.length
@@ -82,7 +82,7 @@ export async function GET(request) {
         ...product,
         avgRating: Math.round(avgRating * 10) / 10, // Round to 1 decimal
         ratingCount: ratings.length,
-        rating: undefined, // Remove full rating array
+        rating: ratings, // Keep rating array for frontend compatibility
       };
     });
 
